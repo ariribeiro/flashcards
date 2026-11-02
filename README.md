@@ -1,56 +1,72 @@
-# Welcome to your Expo app 👋
+# Flashcards
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App de flashcards com repetição espaçada (**FSRS**), para **web e iPhone** com uma única base de código (Expo / React Native) e **Firebase**.
 
-## Get started
+- Baralhos independentes
+- Geração de cartões com IA: o app monta o prompt a partir de **assunto + objetivo**. Você cola a resposta (JSON) de qualquer LLM **ou** gera direto com o **Gemini** usando a sua chave de API
+- Agendamento com [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs), histórico de revisões salvo para otimização futura
+- Login com Google (e Sign in with Apple no iOS, exigido pela App Store)
+- Design minimalista, modo claro/escuro, modo foco no estudo, atalhos de teclado na web (espaço, 1–4, Esc)
 
-1. Install dependencies
+## Estrutura
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/app/            rotas (Expo Router)
+  login.tsx
+  (app)/index.tsx               baralhos
+  (app)/settings.tsx            chave do Gemini, retenção, conta
+  (app)/deck/[id]/index.tsx     detalhes do baralho
+  (app)/deck/[id]/study.tsx     sessão de estudo (FSRS)
+  (app)/deck/[id]/generate.tsx  assunto → objetivo → prompt/Gemini → revisão → importar
+  (app)/deck/[id]/card.tsx      criar/editar cartão
+src/ai/             prompt, parser (zod), cliente Gemini, armazenamento da chave
+src/fsrs/           wrapper do ts-fsrs e conversão para o Firestore
+src/data/           Firestore (baralhos, cartões, revisões, hooks, fila)
+src/auth/           Google / Apple (arquivos .web.ts para a web)
+src/ui/, src/theme/ componentes e tokens de design
+tests/              testes unitários (vitest)
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Dados no Firestore: `users/{uid}/decks/{deckId}/cards/{cardId}` e `.../reviewLogs/{logId}`; regras em `firestore.rules`.
 
-### Other setup steps
+## Configuração
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+1. **Firebase**: crie um projeto, ative o **Firestore** e, em Authentication, os provedores **Google** e **Apple**.
+2. Registre um **app Web** e um **app iOS** (bundle id `com.ariribeiro.flashcards`, ou altere em `app.json`).
+3. No Google Cloud Console (Credenciais), crie um cliente OAuth do tipo **iOS** com o mesmo bundle id.
+4. Copie `.env.example` para `.env` e preencha os valores.
+5. Publique as regras: `npx firebase deploy --only firestore`.
 
-## Learn more
+## Rodando
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm install
+npm run web          # web em http://localhost:8081
+npm test             # testes unitários
+npm run typecheck
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+iPhone: o login nativo do Google exige um **development build** (não funciona no Expo Go):
 
-## Join the community
+```bash
+npx eas-cli@latest build -p ios --profile development
+npx expo start --dev-client
+```
 
-Join our community of developers creating universal apps.
+Desenvolvimento local sem projeto real (Firebase Emulator Suite): defina `EXPO_PUBLIC_USE_EMULATORS=1` e `EXPO_PUBLIC_FIREBASE_PROJECT_ID=demo-flashcards`, depois rode `npx firebase emulators:start --project demo-flashcards`. Com `EXPO_PUBLIC_EMULATOR_FAKE_GOOGLE=1`, o botão "Entrar com Google" na web usa um usuário de teste do emulador.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Deploy
+
+- Web: `npx expo export -p web && npx firebase deploy --only hosting` (adicione o domínio do Hosting em Authentication → Authorized domains).
+- iOS: `npx eas-cli@latest build -p ios` e `npx eas-cli@latest submit -p ios`.
+
+## Formato da resposta da IA
+
+```json
+{
+  "deck": "título sugerido",
+  "cards": [{ "front": "pergunta", "back": "resposta", "tags": ["opcional"] }]
+}
+```
+
+O parser aceita a resposta dentro de ```json e com texto antes/depois, além de um array direto. Cartões inválidos são ignorados e listados.
