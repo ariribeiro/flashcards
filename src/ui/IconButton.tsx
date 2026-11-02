@@ -8,21 +8,30 @@ export function IconButton({
   onPress,
   label,
   size = 22,
+  color,
+  filled,
 }: {
   icon: LucideIcon;
   onPress: () => void;
   label: string;
   size?: number;
+  color?: string;
+  filled?: boolean;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      hitSlop={12}
+      hitSlop={10}
       onPress={onPress}
-      style={({ pressed }) => ({ padding: 6, opacity: pressed ? 0.5 : 1 })}>
-      <Icon size={size} color={colors.muted} strokeWidth={1.75} />
+      style={({ pressed }) => ({
+        padding: 8,
+        borderRadius: 999,
+        backgroundColor: filled ? colors.subtle : 'transparent',
+        opacity: pressed ? 0.6 : 1,
+      })}>
+      <Icon size={size} color={color ?? colors.text} strokeWidth={2} />
     </Pressable>
   );
 }

@@ -1,6 +1,16 @@
+export { Avatar } from './Avatar';
 export { Button } from './Button';
+export { Chip } from './Chip';
+export { DeckEditorSheet } from './DeckEditorSheet';
+export { DeckIcon } from './DeckIcon';
+export { DeckStack } from './DeckStack';
 export { EmptyState } from './EmptyState';
+export { Fab } from './Fab';
+export { GoogleIcon } from './GoogleIcon';
+export { Hero, shade } from './Hero';
 export { IconButton } from './IconButton';
+export { Logo, LogoMark } from './Logo';
+export { PlayingCard } from './PlayingCard';
 export { Screen } from './Screen';
 export { Segmented } from './Segmented';
 export { Surface } from './Surface';

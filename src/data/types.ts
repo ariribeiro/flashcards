@@ -8,6 +8,10 @@ export type Deck = {
   description?: string;
   createdAt: Timestamp | null;
   cardCount: number;
+  /** Índice da cor em `colors.decks` do tema */
+  color?: number;
+  /** Nome do ícone (ver `DECK_ICONS`) */
+  icon?: string;
   newPerDay: number;
   newToday?: { day: string; count: number };
 };

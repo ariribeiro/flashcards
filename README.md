@@ -6,15 +6,18 @@ App de flashcards com repetição espaçada (**FSRS**), para **web e iPhone** co
 - Geração de cartões com IA: o app monta o prompt a partir de **assunto + objetivo**. Você cola a resposta (JSON) de qualquer LLM **ou** gera direto com o **Gemini** usando a sua chave de API
 - Agendamento com [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs), histórico de revisões salvo para otimização futura
 - Login com Google (e Sign in with Apple no iOS, exigido pela App Store)
-- Design minimalista, modo claro/escuro, modo foco no estudo, atalhos de teclado na web (espaço, 1–4, Esc)
+- Identidade visual de baralho: cada baralho tem cor e ícone e aparece como uma pilha de cartas; as cartas de estudo viram em 3D
+- 3 temas (Vibrante, Mesa de jogo e Papel e tinta), cada um com modo claro e escuro, escolhidos no Perfil
+- Navegação por abas (Início, Baralhos, Perfil), que vira barra lateral em telas largas; atalhos de teclado no estudo (espaço, 1–4, Esc)
 
 ## Estrutura
 
 ```
 src/app/            rotas (Expo Router)
   login.tsx
-  (app)/index.tsx               baralhos
-  (app)/settings.tsx            chave do Gemini, retenção, conta
+  (app)/(tabs)/index.tsx        Início: saudação, cartas de hoje, continuar estudando
+  (app)/(tabs)/decks.tsx        Baralhos: grade de pilhas, busca, novo baralho
+  (app)/(tabs)/profile.tsx      Perfil: conta, sair, tema, retenção, chave do Gemini
   (app)/deck/[id]/index.tsx     detalhes do baralho
   (app)/deck/[id]/study.tsx     sessão de estudo (FSRS)
   (app)/deck/[id]/generate.tsx  assunto → objetivo → prompt/Gemini → revisão → importar
@@ -23,7 +26,8 @@ src/ai/             prompt, parser (zod), cliente Gemini, armazenamento da chave
 src/fsrs/           wrapper do ts-fsrs e conversão para o Firestore
 src/data/           Firestore (baralhos, cartões, revisões, hooks, fila)
 src/auth/           Google / Apple (arquivos .web.ts para a web)
-src/ui/, src/theme/ componentes e tokens de design
+src/theme/          temas (themes.ts), ThemeProvider, cor/ícone dos baralhos
+src/ui/             componentes (PlayingCard, DeckStack, Hero, DeckEditorSheet...)
 tests/              testes unitários (vitest)
 ```
 
@@ -43,6 +47,7 @@ Dados no Firestore: `users/{uid}/decks/{deckId}/cards/{cardId}` e `.../reviewLog
 npm install
 npm run web          # web em http://localhost:8081
 npm test             # testes unitários
+npm run lint
 npm run typecheck
 ```
 

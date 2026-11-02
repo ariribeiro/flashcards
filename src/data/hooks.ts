@@ -1,10 +1,10 @@
 import { onSnapshot, orderBy, query, Timestamp, where, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { DEFAULT_RETENTION } from '@/fsrs/scheduler';
 
 import { cardsCol, deckDoc, decksCol, settingsDoc } from './paths';
-import { dueHorizon, isDue } from './queue';
+import { buildQueue, dueHorizon, isDue, newRemainingToday } from './queue';
 import type { Deck, FlashCard } from './types';
 
 const logError = (where: string) => (e: Error) => console.warn(`[firestore] ${where}:`, e.message);
@@ -51,6 +51,7 @@ export function useCards(deckId: string) {
 /** Atualiza a cada `ms` milissegundos e quando a aba/app volta ao foco. */
 function useNow(ms = 30000) {
   const [now, setNow] = useState(() => Date.now());
+  const refresh = useCallback(() => setNow(Date.now()), []);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), ms);
     const onFocus = () => setNow(Date.now());
@@ -60,7 +61,7 @@ function useNow(ms = 30000) {
       if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('focus', onFocus);
     };
   }, [ms]);
-  return now;
+  return [now, refresh] as const;
 }
 
 /**
@@ -70,17 +71,51 @@ function useNow(ms = 30000) {
  */
 export function useDueCards(deckId: string) {
   const [cards, setCards] = useState<FlashCard[] | null>(null);
-  const now = useNow();
+  const [now, refresh] = useNow();
   useEffect(() => {
-    return onSnapshot(query(cardsCol(deckId), where('due', '<=', Timestamp.fromDate(dueHorizon())), orderBy('due', 'asc')), (snap) =>
-      setCards(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FlashCard, 'id'>) }))),
+    return onSnapshot(query(cardsCol(deckId), where('due', '<=', Timestamp.fromDate(dueHorizon())), orderBy('due', 'asc')), (snap) => {
+      setCards(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FlashCard, 'id'>) })));
+      refresh();
+    },
       logError('useDueCards'),
     );
-  }, [deckId]);
+  }, [deckId, refresh]);
+  return useMemo(() => cards?.filter((c) => isDue(c, now)) ?? null, [cards, now]);
+}
+
+export type DueCounts = { new: number; learning: number; review: number; total: number };
+
+/** Contagem de cartas para hoje em vários baralhos de uma vez (Início e Baralhos). */
+export function useDueCounts(decks: Deck[] | null): Record<string, DueCounts> {
+  const [byDeck, setByDeck] = useState<Record<string, FlashCard[]>>({});
+  const [now, refresh] = useNow();
+  const ids = (decks ?? []).map((d) => d.id).join(',');
+
+  useEffect(() => {
+    if (!ids) return;
+    const unsubs = ids.split(',').map((id) =>
+      onSnapshot(
+        query(cardsCol(id), where('due', '<=', Timestamp.fromDate(dueHorizon())), orderBy('due', 'asc')),
+        (snap) => {
+          setByDeck((m) => ({ ...m, [id]: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FlashCard, 'id'>) })) }));
+          refresh();
+        },
+        logError('useDueCounts'),
+      ),
+    );
+    return () => unsubs.forEach((u) => u());
+  }, [ids, refresh]);
+
   return useMemo(() => {
-    const t = Math.max(now, Date.now());
-    return cards?.filter((c) => isDue(c, t)) ?? null;
-  }, [cards, now]);
+    const t = now;
+    const out: Record<string, DueCounts> = {};
+    for (const d of decks ?? []) {
+      const due = (byDeck[d.id] ?? []).filter((c) => isDue(c, t));
+      const { counts, queue } = buildQueue(due, newRemainingToday(d));
+      out[d.id] = { ...counts, total: queue.length };
+    }
+    return out;
+  }, [decks, byDeck, now]);
 }
 
 export type FsrsSettings = { request_retention: number };

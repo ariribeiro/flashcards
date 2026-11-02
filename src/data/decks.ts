@@ -9,10 +9,12 @@ import { DEFAULT_NEW_PER_DAY } from './queue';
 
 export { DEFAULT_NEW_PER_DAY };
 
-export async function createDeck(name: string, description = ''): Promise<string> {
+export async function createDeck(name: string, style: { color?: number; icon?: string } = {}): Promise<string> {
   const ref = await addDoc(decksCol(), {
     name: name.trim(),
-    description: description.trim(),
+    description: '',
+    color: style.color ?? 0,
+    icon: style.icon ?? 'BookOpen',
     createdAt: serverTimestamp(),
     cardCount: 0,
     newPerDay: DEFAULT_NEW_PER_DAY,
@@ -20,7 +22,7 @@ export async function createDeck(name: string, description = ''): Promise<string
   return ref.id;
 }
 
-export function updateDeck(deckId: string, data: Partial<Pick<Deck, 'name' | 'description' | 'newPerDay'>>) {
+export function updateDeck(deckId: string, data: Partial<Pick<Deck, 'name' | 'description' | 'newPerDay' | 'color' | 'icon'>>) {
   return updateDoc(deckDoc(deckId), data);
 }
 

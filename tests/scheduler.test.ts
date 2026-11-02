@@ -68,3 +68,28 @@ describe('isDue', () => {
     expect(isDue({ state: State.Review, due: ts(Date.now() - 1) })).toBe(true);
   });
 });
+
+describe('tema e estilo do baralho', () => {
+  it('deckStyle usa os campos salvos ou um padrão estável pelo id', async () => {
+    const { deckStyle, DECK_ICONS } = await import('@/theme/deckStyle');
+    expect(deckStyle({ id: 'x', color: 3, icon: 'Brain' })).toEqual({ color: 3, icon: 'Brain' });
+    const a = deckStyle({ id: 'abc' });
+    expect(deckStyle({ id: 'abc' })).toEqual(a);
+    expect(a.color).toBeGreaterThanOrEqual(0);
+    expect(a.color).toBeLessThan(8);
+    expect(DECK_ICONS).toContain(a.icon);
+    expect(deckStyle({ id: 'x', color: 99, icon: 'Nope' }).icon).not.toBe('Nope');
+  });
+
+  it('resolveScheme respeita a aparência escolhida', async () => {
+    const { resolveScheme, THEME_LIST } = await import('@/theme/themes');
+    expect(resolveScheme('system', 'dark')).toBe('dark');
+    expect(resolveScheme('system', null)).toBe('light');
+    expect(resolveScheme('light', 'dark')).toBe('light');
+    expect(resolveScheme('dark', 'light')).toBe('dark');
+    for (const t of THEME_LIST) {
+      expect(t.light.decks).toHaveLength(8);
+      expect(t.dark.decks).toHaveLength(8);
+    }
+  });
+});

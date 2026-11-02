@@ -42,7 +42,7 @@ export default function CardEditor() {
   }
 
   async function remove() {
-    if (!cardId || !(await confirm('Excluir cartão', 'O cartão e seu progresso serão apagados.', 'Excluir'))) return;
+    if (!cardId || !(await confirm('Excluir carta', 'A carta e seu progresso serão apagados.', 'Excluir'))) return;
     await deleteCard(id, cardId);
     router.back();
   }
