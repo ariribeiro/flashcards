@@ -1,14 +1,23 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-// O plugin do Google Sign-In precisa do "reversed client ID" do cliente iOS
-// (ex.: com.googleusercontent.apps.1234-abcd). Ele vem do .env para não ficar no código.
 export default ({ config }: ConfigContext): ExpoConfig => {
+  // O plugin do Google Sign-In precisa do "reversed client ID" do cliente iOS
+  // (ex.: com.googleusercontent.apps.1234-abcd). Ele vem do .env para não ficar no código.
   const iosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
+
+  // Contas Apple gratuitas (Xcode + "Personal Team") não suportam Sign in with Apple.
+  // Com EXPO_PUBLIC_APPLE_SIGNIN=0 o recurso sai do build e o botão some do login.
+  const appleSignIn = process.env.EXPO_PUBLIC_APPLE_SIGNIN !== '0';
+
+  const plugins = (config.plugins ?? []).filter((p) => appleSignIn || p !== 'expo-apple-authentication');
+
   return {
     ...(config as ExpoConfig),
+    ios: { ...config.ios, usesAppleSignIn: appleSignIn },
     plugins: [
-      ...(config.plugins ?? []),
+      ...plugins,
       ...(iosUrlScheme ? [['@react-native-google-signin/google-signin', { iosUrlScheme }] as [string, unknown]] : []),
+      ...(appleSignIn ? [] : ['./plugins/withoutAppleSignIn']),
     ],
   };
 };

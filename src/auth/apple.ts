@@ -4,7 +4,9 @@ import { OAuthProvider, signInWithCredential } from 'firebase/auth';
 
 import { auth } from '@/lib/firebase';
 
-export const appleSignInAvailable = () => AppleAuthentication.isAvailableAsync();
+// EXPO_PUBLIC_APPLE_SIGNIN=0: build para conta Apple gratuita, sem Sign in with Apple.
+export const appleSignInAvailable = async () =>
+  process.env.EXPO_PUBLIC_APPLE_SIGNIN !== '0' && (await AppleAuthentication.isAvailableAsync());
 
 /** Sign in with Apple (exigido pela App Store quando há login com Google). */
 export async function signInWithApple(): Promise<boolean> {

@@ -58,6 +58,15 @@ npx eas-cli@latest build -p ios --profile development
 npx expo start --dev-client
 ```
 
+### iPhone com Apple ID gratuito (Mac + Xcode)
+
+Sem a conta paga do Apple Developer Program, dá para instalar pelo Xcode com o "Personal Team". O app expira em 7 dias e precisa ser reinstalado (basta rodar o comando de novo). Nesse modo o "Entrar com Apple" fica desativado.
+
+1. No `.env`, preencha `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` e `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` (do `GoogleService-Info.plist`) e defina `EXPO_PUBLIC_APPLE_SIGNIN=0`.
+2. Xcode → Settings → Accounts: adicione seu Apple ID.
+3. Conecte o iPhone por cabo e rode `npx expo run:ios --device` (escolha o iPhone e o seu Personal Team quando pedir).
+4. No iPhone: ative o Modo de Desenvolvedor e confie no desenvolvedor em Ajustes → Geral → VPN e Gerenciamento de Dispositivos.
+
 Desenvolvimento local sem projeto real (Firebase Emulator Suite): defina `EXPO_PUBLIC_USE_EMULATORS=1` e `EXPO_PUBLIC_FIREBASE_PROJECT_ID=demo-flashcards`, depois rode `npx firebase emulators:start --project demo-flashcards`. Com `EXPO_PUBLIC_EMULATOR_FAKE_GOOGLE=1`, o botão "Entrar com Google" na web usa um usuário de teste do emulador.
 
 ## Deploy
