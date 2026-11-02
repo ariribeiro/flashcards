@@ -1,0 +1,102 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+# Configuração web do Firebase: não é secreta (o acesso aos dados é protegido
+# pelas regras do Firestore), por isso fica aqui em vez de em secrets.
+env:
+  EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyDq8oOi54aL1cw77fozPjc0xnomH-AAXA8
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: flashcards-31c38.firebaseapp.com
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: flashcards-31c38
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: flashcards-31c38.firebasestorage.app
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "346901279625"
+  EXPO_PUBLIC_FIREBASE_APP_ID: 1:346901279625:web:cad223d4735c4f33c8e758
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 346901279625-mfe07mp13cbjl10dd5tegulklch1hicr.apps.googleusercontent.com
+  EXPO_NO_TELEMETRY: "1"
+
+jobs:
+  build:
+    name: Testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo export --platform web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+          retention-days: 7
+
+  preview:
+    name: Preview do PR
+    needs: build
+    # Secrets não ficam disponíveis em PRs vindos de forks.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: flashcards-31c38
+          expires: 7d
+
+  deploy:
+    name: Publicar (produção)
+    needs: build
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://flashcards-31c38.web.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Credenciais do Firebase
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy do Hosting e das regras do Firestore
+        run: npx firebase deploy --only hosting,firestore:rules --project flashcards-31c38 --non-interactive --message "${{ github.sha }}"

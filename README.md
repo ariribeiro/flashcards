@@ -57,7 +57,16 @@ Desenvolvimento local sem projeto real (Firebase Emulator Suite): defina `EXPO_P
 
 ## Deploy
 
-- Web: `npx expo export -p web && npx firebase deploy --only hosting` (adicione o domínio do Hosting em Authentication → Authorized domains).
+### Web (GitHub Actions → Firebase Hosting)
+
+O workflow `.github/workflows/web.yml`:
+- em todo push e PR: `npm ci`, typecheck, testes e build web (`expo export`);
+- em **PRs**: publica um preview temporário (7 dias) e comenta o link no PR;
+- em **push na `main`** (ou execução manual em *Actions → Web → Run workflow*): publica em produção, https://flashcards-31c38.web.app, junto com as regras do Firestore.
+
+Configuração única: crie o secret **`FIREBASE_SERVICE_ACCOUNT`** no repositório (Settings → Secrets and variables → Actions) com o JSON de uma conta de serviço. Para gerar: Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada.
+
+Deploy manual: `npx expo export -p web && npx firebase deploy --only hosting`.
 - iOS: `npx eas-cli@latest build -p ios` e `npx eas-cli@latest submit -p ios`.
 
 ## Formato da resposta da IA
