@@ -95,6 +95,10 @@ jobs:
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
+          if [ -z "$SERVICE_ACCOUNT" ]; then
+            echo "::error title=Secret ausente::Crie o secret FIREBASE_SERVICE_ACCOUNT (Settings > Secrets and variables > Actions) com o JSON da conta de serviço do Firebase."
+            exit 1
+          fi
           printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
